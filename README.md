@@ -10,6 +10,7 @@ Digital signage system for school TV screens. Manage media content, display sche
 - **Multi-language UI** — admin panel available in English and Latvian
 - **User management** — multiple admin accounts with role-based access
 - **Activity log** — full audit trail of admin actions
+- **Offline-resilient player** — a service worker caches the last playlist, schedule and media, so a network outage keeps the last content on screen (requires HTTPS or localhost)
 
 ## Tech stack
 
@@ -29,7 +30,8 @@ npm install
 
 # 3. Configure environment
 cp .env.example .env
-# Edit .env — set a strong JWT_SECRET
+# Set JWT_SECRET in .env (required — the server won't start without it):
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 # 4. Start the server
 npm start
