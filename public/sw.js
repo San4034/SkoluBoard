@@ -17,7 +17,7 @@
  * a service worker but a pre-2017 JS engine.
  */
 
-var VERSION = 'v1';
+var VERSION = 'v2';
 var SHELL_CACHE = 'sb-shell-' + VERSION;
 var DATA_CACHE  = 'sb-data-'  + VERSION;
 var MEDIA_CACHE = 'sb-media-' + VERSION;
@@ -130,9 +130,15 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(cacheFirst(request, MEDIA_CACHE));
     return;
   }
+  // The player script and the page shell go network-first: a fixed build must
+  // reach the TV on the next reload, not one reload later. The cached copy is
+  // only a fallback for a real outage, so a bad build can never get pinned.
   if (url.pathname === '/' || url.pathname === '/index.html' ||
-      url.pathname === '/js/player.js' || url.pathname.indexOf('/fonts/') === 0 ||
-      url.pathname === '/SkoluBoard-logo.png') {
+      url.pathname === '/js/player.js') {
+    event.respondWith(networkFirst(request, SHELL_CACHE));
+    return;
+  }
+  if (url.pathname.indexOf('/fonts/') === 0 || url.pathname === '/SkoluBoard-logo.png') {
     event.respondWith(staleWhileRevalidate(request, SHELL_CACHE));
     return;
   }

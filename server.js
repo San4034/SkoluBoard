@@ -781,6 +781,23 @@ app.get('/api/playlist', (_req, res) => {
   res.json(items.map(mapItem));
 });
 
+// Player-side crash reporter. The signage screens run on TV WebViews we cannot
+// attach a debugger to, and some collapse every error location to "<page>:1:1",
+// so the on-screen failsafe also POSTs the raw message/stack here to land the
+// exact text in the server log instead of being transcribed off a screen.
+app.post('/api/client-error', (req, res) => {
+  const clip = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').slice(0, n);
+  const b = req.body || {};
+  console.error('[client-error]',
+    'ip='  + (String(req.ip || '').replace(/^::ffff:/, '')),
+    'ua="' + clip(req.headers['user-agent'], 200) + '"',
+    'msg="' + clip(b.message, 500) + '"',
+    'src="' + clip(b.source, 300) + '"',
+    'at='  + clip(b.line, 12) + ':' + clip(b.col, 12),
+    'stack="' + clip(b.stack, 1000) + '"');
+  res.status(204).end();
+});
+
 // ── Settings ──────────────────────────────────────────────────────────
 
 app.get('/api/settings/public', (_req, res) => {

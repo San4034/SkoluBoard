@@ -24,12 +24,32 @@
         box.appendChild(row);
       } catch (e) {}
     }
-    window.onerror = function (message, source, line, col) {
+    function report(o) {
+      /* Land the raw error in the server log: these TV WebViews cannot be
+         debugged remotely and many collapse every error location to ":1:1". */
+      try {
+        var x = new XMLHttpRequest();
+        x.open('POST', '/api/client-error', true);
+        x.setRequestHeader('Content-Type', 'application/json');
+        x.send(JSON.stringify(o));
+      } catch (e) {}
+    }
+    window.onerror = function (message, source, line, col, err) {
+      report({
+        message: String(message),
+        source:  String(source || ''),
+        line:    line || 0,
+        col:     col || 0,
+        stack:   (err && err.stack) ? String(err.stack) : ''
+      });
       paint(message + '  (' + (source || '?') + ':' + (line || 0) + ':' + (col || 0) + ')');
       return false;
     };
     window.addEventListener && window.addEventListener('unhandledrejection', function (e) {
-      paint('unhandled promise rejection: ' + ((e && e.reason && (e.reason.message || e.reason)) || e));
+      var r = e && e.reason;
+      report({ message: 'unhandledrejection: ' + ((r && (r.message || r)) || e),
+               stack: (r && r.stack) ? String(r.stack) : '' });
+      paint('unhandled promise rejection: ' + ((r && (r.message || r)) || e));
     });
   })();
   </script>

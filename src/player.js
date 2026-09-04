@@ -5,9 +5,16 @@
 // responses and every piece of uploaded media, so a network outage keeps the
 // last content on screen instead of the error page. Old WebViews without a
 // service worker simply run as before.
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(function () {});
+//
+// Some embedded TV browsers expose `navigator.serviceWorker` as a broken stub:
+// the property exists, but calling register() throws synchronously instead of
+// returning a rejected promise (or returns something with no .catch at all).
+// This must never be able to crash page load, so every step is guarded.
+if ('serviceWorker' in navigator && typeof navigator.serviceWorker.register === 'function') {
+  try {
+    const reg = navigator.serviceWorker.register('/sw.js');
+    if (reg && typeof reg.catch === 'function') reg.catch(function () {});
+  } catch (e) { /* unsupported/broken implementation — run without offline caching */ }
 }
 
 function _setOffline(on) {
