@@ -25,8 +25,8 @@
       } catch (e) {}
     }
     function report(o) {
-      /* Land the raw error in the server log: these TV WebViews cannot be
-         debugged remotely and many collapse every error location to ":1:1". */
+      /* Land the raw error in the server log: signage players cannot be
+         debugged remotely and often collapse the error location to ":1:1". */
       try {
         var x = new XMLHttpRequest();
         x.open('POST', '/api/client-error', true);
@@ -34,22 +34,39 @@
         x.send(JSON.stringify(o));
       } catch (e) {}
     }
+    /* True only when the error trace points at a real file we shipped. Kiosk
+       agents and browser extensions inject code that Chrome evaluates as
+       "<anonymous>:1:1" with a stack that never names a .js/.html resource —
+       those must be logged but must NOT blank the screen. */
+    function looksLikeOurs(source, stack) {
+      var s = String(stack || '');
+      if (s.indexOf('.js') !== -1 || s.indexOf('.html') !== -1) return true;
+      var src = String(source || '');
+      return /\.(js|html)([?#:]|$)/.test(src);
+    }
     window.onerror = function (message, source, line, col, err) {
+      var stack = (err && err.stack) ? String(err.stack) : '';
       report({
         message: String(message),
         source:  String(source || ''),
         line:    line || 0,
         col:     col || 0,
-        stack:   (err && err.stack) ? String(err.stack) : ''
+        stack:   stack
       });
-      paint(message + '  (' + (source || '?') + ':' + (line || 0) + ':' + (col || 0) + ')');
+      if (looksLikeOurs(source, stack)) {
+        paint(message + '  (' + (source || '?') + ':' + (line || 0) + ':' + (col || 0) + ')');
+      } else if (window.console && console.warn) {
+        console.warn('SkoluBoard: ignoring injected foreign error:', message);
+      }
       return false;
     };
     window.addEventListener && window.addEventListener('unhandledrejection', function (e) {
       var r = e && e.reason;
-      report({ message: 'unhandledrejection: ' + ((r && (r.message || r)) || e),
-               stack: (r && r.stack) ? String(r.stack) : '' });
-      paint('unhandled promise rejection: ' + ((r && (r.message || r)) || e));
+      var stack = (r && r.stack) ? String(r.stack) : '';
+      report({ message: 'unhandledrejection: ' + ((r && (r.message || r)) || e), stack: stack });
+      if (looksLikeOurs('', stack)) {
+        paint('unhandled promise rejection: ' + ((r && (r.message || r)) || e));
+      }
     });
   })();
   </script>
