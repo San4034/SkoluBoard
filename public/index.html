@@ -68,6 +68,8 @@
         paint('unhandled promise rejection: ' + ((r && (r.message || r)) || e));
       }
     });
+    /* Let the app hand structured diagnostics to the same log sink. */
+    window.SB_report = report;
   })();
   </script>
   <title>SkoluBoard</title>

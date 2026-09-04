@@ -822,7 +822,23 @@ async function init() {
 
   } catch (err) {
     console.error(err);
-    showStatus('⚠️', 'Connection error', 'Failed to load playlist from server');
+    // Surface the real reason on screen and in the server log: on older signage
+    // players "Connection error" was hiding whether fetch is missing, the TLS
+    // handshake failed, JSON was malformed or the server returned an error.
+    const detail = String((err && (err.message || err.name)) || err ||
+      'Failed to load playlist from server');
+    if (typeof fetch === 'undefined') {
+      showStatus('⚠️', 'Connection error', 'This device has no fetch() support — ' + detail);
+    } else {
+      showStatus('⚠️', 'Connection error', detail);
+    }
+    if (window.SB_report) {
+      window.SB_report({
+        message: 'player init failed: ' + detail,
+        source:  'player.js',
+        stack:   (err && err.stack) ? String(err.stack) : '',
+      });
+    }
   }
 }
 
